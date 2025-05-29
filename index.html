@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Química Orgânica - Caça Palavras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0f172a;
+            color: white;
+        }
+        
+        .game-title {
+            text-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6;
+        }
+        
+        .word-search-container {
+            display: grid;
+            grid-template-columns: repeat(var(--size), 1fr);
+            gap: 2px;
+        }
+        
+        .cell {
+            width: 100%;
+            aspect-ratio: 1/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        
+        .cell.selected {
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 4px;
+        }
+        
+        .cell.found {
+            background-color: #10b981;
+            color: white;
+            border-radius: 4px;
+        }
+        
+        .word-list {
+            column-count: 2;
+            column-gap: 1rem;
+        }
+        
+        .word-item {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .word-item:hover {
+            color: #3b82f6;
+        }
+        
+        .word-item.found {
+            text-decoration: line-through;
+            color: #10b981;
+        }
+        
+        .definition-card {
+            transition: all 0.3s ease;
+            max-height: 0;
+            overflow: hidden;
+        }
+        
+        .definition-card.show {
+            max-height: 500px;
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 640px) {
+            .word-list {
+                column-count: 1;
+            }
+        }
+        
+        /* Animation for title */
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Animation for difficulty buttons */
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        .bounce {
+            animation: bounce 1.5s infinite;
+        }
+        
+        .bounce-delay-1 {
+            animation-delay: 0.2s;
+        }
+        
+        .bounce-delay-2 {
+            animation-delay: 0.4s;
+        }
+        
+        /* Glow effect for title */
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 5px #3b82f6, 0 0 10px #3b82f6;
+            }
+            50% {
+                text-shadow: 0 0 20px #3b82f6, 0 0 30px #3b82f6;
+            }
+        }
+        
+        .glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        /* Particle background */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .particle {
+            position: absolute;
+            background-color: rgba(59, 130, 246, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- Particle Background -->
+    <div id="particles" class="particles"></div>
+    
+    <!-- Cover Screen -->
+    <div id="cover" class="fixed inset-0 bg-gradient-to-br from-blue-900 to-gray-900 flex flex-col items-center justify-center z-50 transition-opacity duration-500">
+        <div class="text-center max-w-4xl px-4">
+            <div class="mb-8">
+                <div class="flex justify-center items-center mb-2">
+                    <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mr-4 shadow-lg">
+                        <i class="fas fa-atom text-3xl text-white"></i>
+                    </div>
+                    <h1 class="game-title text-5xl md:text-7xl font-bold text-blue-400 pulse glow">
+                        <span class="text-white">QUÍMICA</span> ORGÂNICA
+                    </h1>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold text-blue-300 mb-2">LIGAÇÕES QUÍMICAS</h2>
+                <p class="text-xl text-blue-200">Aprenda química de forma divertida!</p>
+            </div>
+            
+            <div class="bg-gray-800 bg-opacity-70 rounded-xl p-8 mb-10 backdrop-blur-sm border border-blue-500 border-opacity-30 shadow-xl">
+                <p class="text-lg md:text-xl mb-6">Encontre todas as palavras relacionadas a ligações químicas e aprenda seus significados!</p>
+                
+                <div class="flex flex-col space-y-4 mb-8">
+                    <h3 class="text-2xl font-semibold text-blue-300">ESCOLHA A DIFICULDADE:</h3>
+                    <div class="flex flex-wrap justify-center gap-6">
+                        <button onclick="startGame('easy')" class="difficulty-btn bg-green-600 hover:bg-green-700 px-8 py-4 text-xl rounded-xl font-bold transition-all transform hover:scale-105 bounce shadow-lg">
+                            <i class="fas fa-smile mr-2"></i> FÁCIL (8x8)
+                        </button>
+                        <button onclick="startGame('medium')" class="difficulty-btn bg-yellow-600 hover:bg-yellow-700 px-8 py-4 text-xl rounded-xl font-bold transition-all transform hover:scale-105 bounce bounce-delay-1 shadow-lg">
+                            <i class="fas fa-meh mr-2"></i> MÉDIO (12x12)
+                        </button>
+                        <button onclick="startGame('hard')" class="difficulty-btn bg-red-600 hover:bg-red-700 px-8 py-4 text-xl rounded-xl font-bold transition-all transform hover:scale-105 bounce bounce-delay-2 shadow-lg">
+                            <i class="fas fa-frown mr-2"></i> DIFÍCIL (16x16)
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-center space-x-4">
+                <button onclick="showInstructions()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full mr-4 transition-all flex items-center shadow-lg">
+                    <i class="fas fa-info-circle mr-2"></i> Instruções
+                </button>
+                <button onclick="showAbout()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-full transition-all flex items-center shadow-lg">
+                    <i class="fas fa-graduation-cap mr-2"></i> Aprender
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Instructions Modal -->
+    <div id="instructionsModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-xl p-6 max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-blue-400">COMO JOGAR</h3>
+                <button onclick="closeModal('instructionsModal')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-start bg-gray-700 p-4 rounded-lg">
+                    <div class="bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                        <span class="font-bold">1</span>
+                    </div>
+                    <p>Selecione a dificuldade: Fácil (8x8), Médio (12x12) ou Difícil (16x16).</p>
+                </div>
+                <div class="flex items-start bg-gray-700 p-4 rounded-lg">
+                    <div class="bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                        <span class="font-bold">2</span>
+                    </div>
+                    <p>Clique e arraste para selecionar as letras na grade, formando uma das palavras da lista.</p>
+                </div>
+                <div class="flex items-start bg-gray-700 p-4 rounded-lg">
+                    <div class="bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                        <span class="font-bold">3</span>
+                    </div>
+                    <p>As palavras podem estar na horizontal, vertical ou diagonal, em qualquer direção.</p>
+                </div>
+                <div class="flex items-start bg-gray-700 p-4 rounded-lg">
+                    <div class="bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                        <span class="font-bold">4</span>
+                    </div>
+                    <p>Quando encontrar uma palavra, ela será marcada na lista e na grade.</p>
+                </div>
+                <div class="flex items-start bg-gray-700 p-4 rounded-lg">
+                    <div class="bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                        <span class="font-bold">5</span>
+                    </div>
+                    <p>Clique em qualquer palavra na lista para aprender seu significado!</p>
+                </div>
+                <div class="flex items-start bg-gray-700 p-4 rounded-lg">
+                    <div class="bg-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">
+                        <span class="font-bold">6</span>
+                    </div>
+                    <p>Encontre todas as palavras para vencer o jogo!</p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-center">
+                <button onclick="closeModal('instructionsModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-all">
+                    Entendi!
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Learn Modal -->
+    <div id="aboutModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-xl p-6 max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-blue-400">APRENDA SOBRE LIGAÇÕES QUÍMICAS</h3>
+                <button onclick="closeModal('aboutModal')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <p class="text-lg">As ligações químicas são forças que mantêm os átomos unidos nas moléculas. Na química orgânica, as principais são:</p>
+                
+                <div class="space-y-4">
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-300 mb-2">Ligação Covalente</h4>
+                        <p>Compartilhamento de pares de elétrons entre átomos. Forma a maioria das moléculas orgânicas.</p>
+                        <p class="text-sm text-blue-200 mt-1">Exemplo: Metano (CH₄) tem ligações covalentes</p>
+                    </div>
+                    
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-300 mb-2">Ligação Iônica</h4>
+                        <p>Transferência de elétrons de um átomo para outro, formando íons que se atraem.</p>
+                        <p class="text-sm text-blue-200 mt-1">Exemplo: Cloreto de sódio (NaCl) tem ligação iônica</p>
+                    </div>
+                    
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-300 mb-2">Ligação de Hidrogênio</h4>
+                        <p>Força intermolecular especial entre hidrogênio e átomos eletronegativos (O, N, F).</p>
+                        <p class="text-sm text-blue-200 mt-1">Exemplo: Entre moléculas de água há ligações de hidrogênio</p>
+                    </div>
+                    
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-300 mb-2">Ligação Sigma (σ)</h4>
+                        <p>Ligação covalente formada pela sobreposição frontal de orbitais atômicos.</p>
+                        <p class="text-sm text-blue-200 mt-1">Exemplo: Todas as ligações simples são do tipo sigma</p>
+                    </div>
+                    
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <h4 class="font-bold text-blue-300 mb-2">Ligação Pi (π)</h4>
+                        <p>Ligação covalente formada pela sobreposição lateral de orbitais p.</p>
+                        <p class="text-sm text-blue-200 mt-1">Exemplo: Ligações duplas têm 1 sigma e 1 pi</p>
+                    </div>
+                </div>
+                
+                <p class="text-sm text-gray-400 mt-4">Este jogo foi desenvolvido para ajudar no aprendizado de química orgânica de forma divertida!</p>
+            </div>
+            <div class="mt-6 flex justify-center">
+                <button onclick="closeModal('aboutModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-all">
+                    Voltar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Screen -->
+    <div id="game" class="hidden flex-1 container mx-auto px-4 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Left Column - Game Board -->
+            <div class="flex-1">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-blue-400">CAÇA PALAVRAS - LIGAÇÕES QUÍMICAS</h2>
+                    <button onclick="backToCover()" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-full text-sm transition-all flex items-center">
+                        <i class="fas fa-home mr-1"></i> Menu
+                    </button>
+                </div>
+                
+                <div class="bg-gray-800 p-4 rounded-xl shadow-lg border border-blue-500 border-opacity-30">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="text-lg">
+                            <span class="font-bold text-blue-300">Dificuldade:</span>
+                            <span id="difficultyDisplay" class="ml-2"></span>
+                        </div>
+                        <div class="text-lg">
+                            <span class="font-bold text-blue-300">Encontradas:</span>
+                            <span id="foundCount" class="ml-2">0</span>
+                            <span>/</span>
+                            <span id="totalWords"></span>
+                        </div>
+                    </div>
+                    
+                    <div id="wordSearchContainer" class="word-search-container bg-gray-700 p-2 rounded-lg mb-4 border border-gray-600"></div>
+                    
+                    <div class="flex justify-center space-x-4">
+                        <button onclick="checkSolution()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-full transition-all flex items-center">
+                            <i class="fas fa-question-circle mr-2"></i> Verificar
+                        </button>
+                        <button onclick="showSolution()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full transition-all flex items-center">
+                            <i class="fas fa-lightbulb mr-2"></i> Solução
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Word List and Definitions -->
+            <div class="lg:w-1/3">
+                <div class="bg-gray-800 p-4 rounded-xl shadow-lg h-full border border-blue-500 border-opacity-30">
+                    <h3 class="text-xl font-bold text-center text-blue-300 mb-4">PALAVRAS PARA ENCONTRAR</h3>
+                    
+                    <div id="wordList" class="word-list text-lg mb-4"></div>
+                    
+                    <div id="definitionContainer" class="mt-4">
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <h4 class="font-bold text-blue-300 mb-2">Significado:</h4>
+                            <p id="definitionText" class="text-gray-300">Clique em qualquer palavra acima para ver seu significado</p>
+                            <div id="definitionExample" class="mt-2 text-sm text-blue-200">
+                                <span class="font-bold">Exemplo:</span> <span id="exampleText"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="congratsMessage" class="hidden mt-6 p-4 bg-green-700 rounded-lg text-center">
+                        <h3 class="text-2xl font-bold mb-2">PARABÉNS!</h3>
+                        <p>Você encontrou todas as palavras!</p>
+                        <button onclick="backToCover()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-all">
+                            Jogar Novamente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let gameBoard = [];
+        let words = [];
+        let foundWords = [];
+        let selectedCells = [];
+        let isMouseDown = false;
+        let difficulty = '';
+        
+        // Word lists and definitions for each difficulty
+        const wordData = {
+            easy: [
+                { word: "COVALENTE", definition: "Ligação onde átomos compartilham elétrons", example: "Metano (CH₄) tem ligações covalentes" },
+                { word: "IONICA", definition: "Ligação formada pela transferência de elétrons", example: "Cloreto de sódio (NaCl) tem ligação iônica" },
+                { word: "SIGMA", definition: "Ligação covalente formada por sobreposição frontal de orbitais", example: "Todas as ligações simples são do tipo sigma" },
+                { word: "PI", definition: "Ligação covalente formada por sobreposição lateral de orbitais", example: "Ligações duplas têm 1 sigma e 1 pi" },
+                { word: "POLAR", definition: "Ligação com distribuição desigual de elétrons", example: "Água (H₂O) tem ligações polares" },
+                { word: "SP", definition: "Hibridização onde um orbital s se mistura com um orbital p", example: "Acetileno (C₂H₂) tem carbonos sp" },
+                { word: "SP2", definition: "Hibridização onde um orbital s se mistura com dois orbitais p", example: "Etileno (C₂H₄) tem carbonos sp²" },
+                { word: "SP3", definition: "Hibridização onde um orbital s se mistura com três orbitais p", example: "Metano (CH₄) tem carbono sp³" },
+                { word: "HIDROGENIO", definition: "Ligação fraca entre hidrogênio e átomos eletronegativos", example: "Entre moléculas de água há ligações de hidrogênio" },
+                { word: "ELETRON", definition: "Partícula subatômica envolvida nas ligações químicas", example: "Ligações envolvem compartilhamento ou transferência de elétrons" }
+            ],
+            medium: [
+                { word: "COVALENTE", definition: "Ligação onde átomos compartilham elétrons", example: "Metano (CH₄) tem ligações covalentes" },
+                { word: "IONICA", definition: "Ligação formada pela transferência de elétrons", example: "Cloreto de sódio (NaCl) tem ligação iônica" },
+                { word: "METALICA", definition: "Ligação entre átomos de metais com elétrons deslocalizados", example: "Ouro e prata têm ligações metálicas" },
+                { word: "SIGMA", definition: "Ligação covalente formada por sobreposição frontal de orbitais", example: "Todas as ligações simples são do tipo sigma" },
+                { word: "PI", definition: "Ligação covalente formada por sobreposição lateral de orbitais", example: "Ligações duplas têm 1 sigma e 1 pi" },
+                { word: "HIBRIDIZACAO", definition: "Mistura de orbitais atômicos para formar novos orbitais", example: "sp³ é um tipo de hibridização" },
+                { word: "POLARIDADE", definition: "Propriedade de moléculas com distribuição desigual de carga", example: "Água é uma molécula polar" },
+                { word: "ELETRONEGATIVIDADE", definition: "Medida da capacidade de um átomo atrair elétrons", example: "Flúor tem alta eletronegatividade" },
+                { word: "DIPOLO", definition: "Separação de cargas em uma molécula", example: "HCl tem um momento dipolar" },
+                { word: "LIGACAO", definition: "Força que mantém átomos unidos em moléculas", example: "Ligações podem ser covalentes, iônicas ou metálicas" },
+                { word: "ORBITAL", definition: "Região do espaço onde há maior probabilidade de encontrar elétrons", example: "Ligações envolvem a sobreposição de orbitais" },
+                { word: "RESONANCIA", definition: "Deslocalização de elétrons em moléculas com ligações múltiplas", example: "Benzeno apresenta ressonância" }
+            ],
+            hard: [
+                { word: "COVALENTE", definition: "Ligação onde átomos compartilham elétrons", example: "Metano (CH₄) tem ligações covalentes" },
+                { word: "IONICA", definition: "Ligação formada pela transferência de elétrons", example: "Cloreto de sódio (NaCl) tem ligação iônica" },
+                { word: "METALICA", definition: "Ligação entre átomos de metais com elétrons deslocalizados", example: "Ouro e prata têm ligações metálicas" },
+                { word: "SIGMA", definition: "Ligação covalente formada por sobreposição frontal de orbitais", example: "Todas as ligações simples são do tipo sigma" },
+                { word: "PI", definition: "Ligação covalente formada por sobreposição lateral de orbitais", example: "Ligações duplas têm 1 sigma e 1 pi" },
+                { word: "HIBRIDIZACAO", definition: "Mistura de orbitais atômicos para formar novos orbitais", example: "sp³ é um tipo de hibridização" },
+                { word: "POLARIDADE", definition: "Propriedade de moléculas com distribuição desigual de carga", example: "Água é uma molécula polar" },
+                { word: "ELETRONEGATIVIDADE", definition: "Medida da capacidade de um átomo atrair elétrons", example: "Flúor tem alta eletronegatividade" },
+                { word: "VANDERWAALS", definition: "Forças intermoleculares fracas entre moléculas", example: "Gases nobres se liquefazem por forças de van der Waals" },
+                { word: "HIDROGENIO", definition: "Ligação fraca entre hidrogênio e átomos eletronegativos", example: "Entre moléculas de água há ligações de hidrogênio" },
+                { word: "DISPERSAO", definition: "Forças de London - tipo mais fraco de força intermolecular", example: "Entre moléculas apares como CH₄ atuam forças de dispersão" },
+                { word: "COORDENADA", definition: "Ligação covalente dativa onde um átomo fornece ambos os elétrons", example: "Íon amônio (NH₄⁺) tem uma ligação coordenada" },
+                { word: "TRIPLA", definition: "Ligação com uma sigma e duas pi entre dois átomos", example: "Nitrogênio molecular (N₂) tem ligação tripla" },
+                { word: "DUPLA", definition: "Ligação com uma sigma e uma pi entre dois átomos", example: "Oxigênio molecular (O₂) tem ligação dupla" },
+                { word: "SIMPLE", definition: "Ligação covalente simples do tipo sigma", example: "Ligação C-H no metano é simples" },
+                { word: "RESONANCIA", definition: "Deslocalização de elétrons em moléculas com ligações múltiplas", example: "Benzeno apresenta ressonância" }
+            ]
+        };
+        
+        // Board sizes for each difficulty
+        const boardSizes = {
+            easy: 8,
+            medium: 12,
+            hard: 16
+        };
+        
+        // Directions for word placement
+        const directions = [
+            { dr: -1, dc: -1 }, // NW
+            { dr: -1, dc: 0 },  // N
+            { dr: -1, dc: 1 },  // NE
+            { dr: 0, dc: -1 },   // W
+            { dr: 0, dc: 1 },    // E
+            { dr: 1, dc: -1 },   // SW
+            { dr: 1, dc: 0 },    // S
+            { dr: 1, dc: 1 }     // SE
+        ];
+        
+        // Start the game with selected difficulty
+        function startGame(selectedDifficulty) {
+            difficulty = selectedDifficulty;
+            document.getElementById('difficultyDisplay').textContent = 
+                selectedDifficulty === 'easy' ? 'Fácil (8x8)' : 
+                selectedDifficulty === 'medium' ? 'Médio (12x12)' : 'Difícil (16x16)';
+            
+            // Initialize the game
+            initGame();
+            
+            // Hide cover and show game
+            document.getElementById('cover').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+        }
+        
+        // Initialize the game
+        function initGame() {
+            const size = boardSizes[difficulty];
+            const wordObjects = [...wordData[difficulty]];
+            words = wordObjects.map(obj => obj.word);
+            foundWords = [];
+            selectedCells = [];
+            
+            // Generate empty board
+            gameBoard = Array(size).fill().map(() => Array(size).fill(''));
+            
+            // Place words on the board
+            placeWords();
+            
+            // Fill remaining spaces with random letters
+            fillEmptySpaces();
+            
+            // Render the board
+            renderBoard();
+            
+            // Render word list
+            renderWordList(wordObjects);
+            
+            // Update found count
+            updateFoundCount();
+            
+            // Reset definition display
+            document.getElementById('definitionText').textContent = 'Clique em qualquer palavra acima para ver seu significado';
+            document.getElementById('exampleText').textContent = '';
+            document.getElementById('congratsMessage').classList.add('hidden');
+        }
+        
+        // Place words on the board
+        function placeWords() {
+            const size = boardSizes[difficulty];
+            
+            for (const word of words) {
+                let placed = false;
+                let attempts = 0;
+                const maxAttempts = 100;
+                
+                while (!placed && attempts < maxAttempts) {
+                    attempts++;
+                    
+                    // Choose random direction
+                    const direction = directions[Math.floor(Math.random() * directions.length)];
+                    
+                    // Choose random starting position
+                    let row = Math.floor(Math.random() * size);
+                    let col = Math.floor(Math.random() * size);
+                    
+                    // Check if word fits in this position and direction
+                    const fits = checkWordFits(word, row, col, direction, size);
+                    
+                    if (fits) {
+                        // Place the word
+                        for (let i = 0; i < word.length; i++) {
+                            const r = row + i * direction.dr;
+                            const c = col + i * direction.dc;
+                            
+                            // If cell is empty or already has the same letter, place the letter
+                            if (gameBoard[r][c] === '' || gameBoard[r][c] === word[i]) {
+                                gameBoard[r][c] = word[i];
+                            }
+                        }
+                        
+                        placed = true;
+                    }
+                }
+                
+                if (!placed) {
+                    console.warn(`Could not place word: ${word}`);
+                }
+            }
+        }
+        
+        // Check if word fits in given position and direction
+        function checkWordFits(word, row, col, direction, size) {
+            // Calculate end position
+            const endRow = row + (word.length - 1) * direction.dr;
+            const endCol = col + (word.length - 1) * direction.dc;
+            
+            // Check if end position is within bounds
+            if (endRow < 0 || endRow >= size || endCol < 0 || endCol >= size) {
+                return false;
+            }
+            
+            // Check each cell along the path
+            for (let i = 0; i < word.length; i++) {
+                const r = row + i * direction.dr;
+                const c = col + i * direction.dc;
+                
+                // If cell is not empty and doesn't match the current letter, word doesn't fit
+                if (gameBoard[r][c] !== '' && gameBoard[r][c] !== word[i]) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        // Fill empty spaces with random letters
+        function fillEmptySpaces() {
+            const size = boardSizes[difficulty];
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (gameBoard[r][c] === '') {
+                        gameBoard[r][c] = letters[Math.floor(Math.random() * letters.length)];
+                    }
+                }
+            }
+        }
+        
+        // Render the game board
+        function renderBoard() {
+            const size = boardSizes[difficulty];
+            const container = document.getElementById('wordSearchContainer');
+            
+            // Clear previous board
+            container.innerHTML = '';
+            
+            // Set CSS variable for grid size
+            container.style.setProperty('--size', size);
+            
+            // Create cells
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell bg-gray-600 text-white cursor-pointer';
+                    cell.textContent = gameBoard[r][c];
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    
+                    // Add event listeners for selection
+                    cell.addEventListener('mousedown', () => handleCellMouseDown(r, c));
+                    cell.addEventListener('mouseenter', () => handleCellMouseEnter(r, c));
+                    cell.addEventListener('mouseup', handleCellMouseUp);
+                    
+                    container.appendChild(cell);
+                }
+            }
+            
+            // Add mouseup listener to document to handle mouse release outside cells
+            document.addEventListener('mouseup', handleCellMouseUp);
+        }
+        
+        // Render the word list with definitions
+        function renderWordList(wordObjects) {
+            const wordListElement = document.getElementById('wordList');
+            wordListElement.innerHTML = '';
+            
+            // Sort words alphabetically
+            const sortedWords = [...wordObjects].sort((a, b) => a.word.localeCompare(b.word));
+            
+            // Create word items
+            sortedWords.forEach(wordObj => {
+                const wordItem = document.createElement('div');
+                wordItem.className = 'word-item mb-2';
+                wordItem.textContent = wordObj.word;
+                wordItem.dataset.word = wordObj.word;
+                
+                if (foundWords.includes(wordObj.word)) {
+                    wordItem.classList.add('found');
+                }
+                
+                // Add click event to show definition
+                wordItem.addEventListener('click', () => {
+                    showDefinition(wordObj);
+                });
+                
+                wordListElement.appendChild(wordItem);
+            });
+            
+            // Update total words display
+            document.getElementById('totalWords').textContent = words.length;
+        }
+        
+        // Show definition for a word
+        function showDefinition(wordObj) {
+            document.getElementById('definitionText').textContent = wordObj.definition;
+            document.getElementById('exampleText').textContent = wordObj.example || '';
+        }
+        
+        // Handle cell mouse down
+        function handleCellMouseDown(row, col) {
+            isMouseDown = true;
+            selectedCells = [{ row, col }];
+            updateSelectedCells();
+        }
+        
+        // Handle cell mouse enter (while mouse is down)
+        function handleCellMouseEnter(row, col) {
+            if (isMouseDown) {
+                // If this is the same cell as the first selected cell, do nothing
+                if (selectedCells.length === 1 && selectedCells[0].row === row && selectedCells[0].col === col) {
+                    return;
+                }
+                
+                // Calculate direction from first selected cell to this cell
+                const firstCell = selectedCells[0];
+                const dr = row - firstCell.row;
+                const dc = col - firstCell.col;
+                
+                // Normalize direction (make each component -1, 0, or 1)
+                const normDr = dr === 0 ? 0 : dr / Math.abs(dr);
+                const normDc = dc === 0 ? 0 : dc / Math.abs(dc);
+                
+                // Check if this cell is in line with previous selections
+                let isValid = true;
+                if (selectedCells.length > 1) {
+                    const prevCell = selectedCells[selectedCells.length - 1];
+                    const prevDr = prevCell.row - selectedCells[selectedCells.length - 2].row;
+                    const prevDc = prevCell.col - selectedCells[selectedCells.length - 2].col;
+                    
+                    if (normDr !== prevDr || normDc !== prevDc) {
+                        isValid = false;
+                    }
+                }
+                
+                if (isValid) {
+                    // Calculate all cells between last selected cell and this cell
+                    const lastCell = selectedCells[selectedCells.length - 1];
+                    const newCells = getCellsBetween(lastCell.row, lastCell.col, row, col);
+                    
+                    // Add new cells to selection (excluding the last cell which is already selected)
+                    selectedCells.push(...newCells.slice(1));
+                } else {
+                    // If direction changed, start new selection from first cell
+                    const newCells = getCellsBetween(firstCell.row, firstCell.col, row, col);
+                    selectedCells = [firstCell, ...newCells.slice(1)];
+                }
+                
+                updateSelectedCells();
+            }
+        }
+        
+        // Handle cell mouse up
+        function handleCellMouseUp() {
+            if (isMouseDown && selectedCells.length > 1) {
+                checkSelectedWord();
+            }
+            isMouseDown = false;
+            selectedCells = [];
+            updateSelectedCells();
+        }
+        
+        // Get all cells between two points in a straight line
+        function getCellsBetween(r1, c1, r2, c2) {
+            const cells = [];
+            
+            // Determine direction
+            const dr = r2 - r1;
+            const dc = c2 - c1;
+            const steps = Math.max(Math.abs(dr), Math.abs(dc));
+            
+            // Normalize direction
+            const normDr = dr === 0 ? 0 : dr / Math.abs(dr);
+            const normDc = dc === 0 ? 0 : dc / Math.abs(dc);
+            
+            // Get all cells along the path
+            for (let i = 0; i <= steps; i++) {
+                const r = r1 + i * normDr;
+                const c = c1 + i * normDc;
+                cells.push({ row: r, col: c });
+            }
+            
+            return cells;
+        }
+        
+        // Update the visual selection of cells
+        function updateSelectedCells() {
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach(cell => {
+                cell.classList.remove('selected');
+                
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                // Check if this cell is selected
+                const isSelected = selectedCells.some(c => c.row === row && c.col === col);
+                
+                if (isSelected) {
+                    cell.classList.add('selected');
+                }
+            });
+        }
+        
+        // Check if selected cells form a valid word
+        function checkSelectedWord() {
+            // Get the letters from selected cells
+            let word = '';
+            for (const cell of selectedCells) {
+                word += gameBoard[cell.row][cell.col];
+            }
+            
+            // Check both directions (forward and backward)
+            if (words.includes(word)) {
+                markWordAsFound(word, selectedCells);
+            } else if (words.includes(reverseString(word))) {
+                markWordAsFound(reverseString(word), [...selectedCells].reverse());
+            }
+        }
+        
+        // Mark a word as found
+        function markWordAsFound(word, cells) {
+            if (!foundWords.includes(word)) {
+                foundWords.push(word);
+                
+                // Mark cells as found
+                cells.forEach(cell => {
+                    const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                    if (cellElement) {
+                        cellElement.classList.add('found');
+                    }
+                });
+                
+                // Update word list
+                const wordObjects = wordData[difficulty];
+                renderWordList(wordObjects);
+                
+                // Show definition of found word
+                const wordObj = wordObjects.find(obj => obj.word === word);
+                if (wordObj) {
+                    showDefinition(wordObj);
+                }
+                
+                // Update found count
+                updateFoundCount();
+                
+                // Check if all words are found
+                if (foundWords.length === words.length) {
+                    showCongrats();
+                }
+            }
+        }
+        
+        // Reverse a string
+        function reverseString(str) {
+            return str.split('').reverse().join('');
+        }
+        
+        // Update the found words count display
+        function updateFoundCount() {
+            document.getElementById('foundCount').textContent = foundWords.length;
+        }
+        
+        // Show congratulations message
+        function showCongrats() {
+            document.getElementById('congratsMessage').classList.remove('hidden');
+        }
+        
+        // Check current solution (highlight all found words)
+        function checkSolution() {
+            // Reset all found cells
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('found');
+            });
+            
+            // For each found word, find its position on the board and mark it
+            for (const word of foundWords) {
+                findWordOnBoard(word);
+            }
+        }
+        
+        // Find a word on the board and mark it
+        function findWordOnBoard(word) {
+            const size = boardSizes[difficulty];
+            
+            // Check all possible starting positions and directions
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    for (const dir of directions) {
+                        // Check if word starts at this position in this direction
+                        if (checkWordAtPosition(word, r, c, dir, size)) {
+                            // Mark all cells of this word
+                            const cells = [];
+                            for (let i = 0; i < word.length; i++) {
+                                cells.push({
+                                    row: r + i * dir.dr,
+                                    col: c + i * dir.dc
+                                });
+                            }
+                            
+                            // Mark cells as found
+                            cells.forEach(cell => {
+                                const cellElement = document.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                                if (cellElement) {
+                                    cellElement.classList.add('found');
+                                }
+                            });
+                            
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check if word exists at given position and direction
+        function checkWordAtPosition(word, row, col, direction, size) {
+            // Check if word fits in this position and direction
+            const endRow = row + (word.length - 1) * direction.dr;
+            const endCol = col + (word.length - 1) * direction.dc;
+            
+            if (endRow < 0 || endRow >= size || endCol < 0 || endCol >= size) {
+                return false;
+            }
+            
+            // Check each letter
+            for (let i = 0; i < word.length; i++) {
+                const r = row + i * direction.dr;
+                const c = col + i * direction.dc;
+                
+                if (gameBoard[r][c] !== word[i]) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        // Show the complete solution
+        function showSolution() {
+            // Mark all words as found
+            for (const word of words) {
+                if (!foundWords.includes(word)) {
+                    foundWords.push(word);
+                    findWordOnBoard(word);
+                }
+            }
+            
+            // Update word list and count
+            const wordObjects = wordData[difficulty];
+            renderWordList(wordObjects);
+            updateFoundCount();
+            showCongrats();
+        }
+        
+        // Show instructions modal
+        function showInstructions() {
+            document.getElementById('instructionsModal').classList.remove('hidden');
+        }
+        
+        // Show about modal
+        function showAbout() {
+            document.getElementById('aboutModal').classList.remove('hidden');
+        }
+        
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+        
+        // Back to cover screen
+        function backToCover() {
+            document.getElementById('game').classList.add('hidden');
+            document.getElementById('cover').classList.remove('hidden');
+            document.getElementById('congratsMessage').classList.add('hidden');
+        }
+        
+        // Create particle background
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                // Random size between 2px and 5px
+                const size = Math.random() * 3 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                
+                // Random position
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                
+                // Random animation
+                const duration = Math.random() * 20 + 10;
+                const delay = Math.random() * 5;
+                particle.style.animation = `float ${duration}s ease-in-out ${delay}s infinite`;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // Add floating animation to particles
+        function addParticleAnimation() {
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes float {
+                    0% {
+                        transform: translate(0, 0) rotate(0deg);
+                        opacity: 1;
+                    }
+                    50% {
+                        opacity: 0.5;
+                    }
+                    100% {
+                        transform: translate(${Math.random() * 100 - 50}px, ${Math.random() * 100 - 50}px) rotate(${Math.random() * 360}deg);
+                        opacity: 1;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Initialize cover screen
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add animation to difficulty buttons
+            const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+            difficultyBtns.forEach((btn, index) => {
+                btn.style.animationDelay = `${index * 0.1}s`;
+            });
+            
+            // Create particle background
+            createParticles();
+            addParticleAnimation();
+        });
+    </script>
+</body>
+</html>
